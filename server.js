@@ -7,10 +7,11 @@ const escapeHtml = require('escape-html');
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
-const knex = require('./utils/knex');
 const exphbs = require('express-handlebars');
 const basicAuth = require('express-basic-auth');
 const settings = require('./app')
+const DB = require('./DB');
+var db = new DB();
 
 
 app.engine('handlebars', exphbs({ defaultLayout: false }));
@@ -18,6 +19,9 @@ app.set('view engine', 'handlebars');
 
 app.use(bodyParser.text());
 app.use(express.static('public'));
+
+
+
 
 /**
  * Configure basic auth
@@ -47,13 +51,14 @@ app.get('/', function(req, res) {
  * Lists all the logs
  */
 app.get('/list', function(req, res) {
-  knex('entries')
-  .select('*')
-  .then((entries) => {
-    res.status(200).send(entries);
-  }).catch((err) => {
-    sendError(res, err);
-  });
+  res.status(200).send(db.getAllEntrys());
+  // knex('entries')
+  // .select('*')
+  // .then((entries) => {
+    
+  // }).catch((err) => {
+  //   sendError(res, err);
+  // });
 });
 
 /**
@@ -73,38 +78,21 @@ app.post('/log', function(req, res) {
     return sendError(res, new Error('Entry must have a length greater than 0.'), 400); 
   }
 
-  knex('entries')
-  .insert({
-    text: escapeHtml(req.body),
-    created_at: knex.fn.now()
-  })
-  .returning('id')
-  .then((entries) => {
-    return knex('entries').whereIn('id', entries);
-  })
-  .then((entries) => {
-    const entry = entries[0];
-    io.emit('entry', entry);
-    res.status(200).send(entry);
-  })
-  .catch((err) => {
-    sendError(res, err);
-  });
+  var rowId = db.insertEntry(escapeHtml(req.body)).lastInsertRowid;
+  var entry = db.getEntry(rowId);
+  io.emit('entry', entry);
+  res.status(200).send(entry);
+ 
 });
 
 /**
  * Clears all the logs
  */
 app.post('/clear', function(req, res) {
-  knex('entries')
-  .del()
-  .then((count) => {  
-    io.emit('clear', { count });
-    res.status(200).send({ count });
-  })
-  .catch((err) => {
-    sendError(res, err);
-  });
+  db.clear();
+  var count = 1;
+  io.emit('clear', { count });
+  res.status(200).send({ count });
 });
 
 server.listen(PORT, function () {
@@ -115,7 +103,6 @@ server.listen(PORT, function () {
 function buildUrl(req) {
   return req.protocol + '://' + req.get('host');
 }
-
 
 function sendError(res, err) {
   const json = {
