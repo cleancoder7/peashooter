@@ -9,6 +9,7 @@
   "author": "Avi Goldman <me@avigoldman.com> (http://avigoldman.com)",
   "license": "ISC",
   "dependencies": {
+    "better-sqlite3": "^7.1.0",
     "body-parser": "^1.17.1",
     "escape-html": "^1.0.3",
     "express": "^4.15.2",
@@ -19,7 +20,6 @@
     "socket.io": "^1.7.3"
   },
   "devDependencies": {
-    "nodemon": "^1.11.0",
-    "sqlite3": "4.0.1"
+    "nodemon": "^1.11.0"
   }
 }
